@@ -7,6 +7,10 @@ import json
 import hashlib
 import pathlib
 from PIL import Image # Added for loading images from cache
+import os # Import os module
+
+# Disable Hugging Face Hub telemetry for local development
+os.environ['HF_HUB_DISABLE_TELEMETRY'] = '1'
 
 # --- Caching Setup ---
 CACHE_DIR = pathlib.Path("cache")
