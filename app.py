@@ -17,8 +17,10 @@ def run_simulation(
     std_dev_inflation: float,
     min_swr_test: float,
     max_swr_test: float,
-    swr_test_step: float
+    swr_test_step: float,
+    progress=gr.Progress()
 ):
+    progress(0, desc="Starting simulation...")
     # --- Core Parameters ---
     initial_investment = float(initial_investment)
     num_years = int(num_years)
@@ -49,7 +51,8 @@ def run_simulation(
     all_results = []
     portfolio_paths_for_plotting = {}
 
-    for swr in withdrawal_rates_to_test:
+    for idx, swr in enumerate(withdrawal_rates_to_test):
+        progress((idx + 1) / len(withdrawal_rates_to_test), desc=f"Simulating SWR: {swr*100:.1f}%")
         success_count = 0
         current_swr_paths = []
 
@@ -152,7 +155,7 @@ def run_simulation(
         ax2.set_xlabel("Year")
         ax2.set_ylabel("Portfolio Value ($)")
 
-    return results_text, fig1, fig2
+    return "Simulation Complete!", results_text, fig1, fig2
 
 # Gradio Interface
 with gr.Blocks() as demo:
@@ -193,8 +196,15 @@ with gr.Blocks() as demo:
 
         with gr.Column():
             gr.Markdown("### Simulation Results")
-            results_output = gr.Textbox(label="Calculated Safe Withdrawal Rate", lines=5)
+            status_output = gr.Textbox(label="Status", interactive=False, lines=1)
+            
+            gr.Markdown("#### Calculated Safe Withdrawal Rate Summary")
+            results_output = gr.Textbox(label="Summary Text", lines=5)
+            
+            gr.Markdown("#### SWR Success Rates Plot")
             swr_plot_output = gr.Plot(label="SWR Success Rates")
+            
+            gr.Markdown("#### Sample Portfolio Paths Plot")
             paths_plot_output = gr.Plot(label="Sample Portfolio Paths")
 
     run_button.click(
@@ -216,7 +226,7 @@ with gr.Blocks() as demo:
             max_swr_test,
             swr_test_step
         ],
-        outputs=[results_output, swr_plot_output, paths_plot_output]
+        outputs=[status_output, results_output, swr_plot_output, paths_plot_output]
     )
 
 demo.launch()
