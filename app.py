@@ -2,6 +2,90 @@ import numpy as np
 import matplotlib.pyplot as plt
 import gradio as gr
 import time
+import os
+import json
+import hashlib
+import pathlib
+from PIL import Image # Added for loading images from cache
+
+# --- Caching Setup ---
+CACHE_DIR = pathlib.Path("cache")
+CACHE_DIR.mkdir(exist_ok=True)
+
+def _generate_cache_key(*args, **kwargs):
+    """Generates a unique hash for the given arguments."""
+    # Convert all arguments to a consistent string representation
+    # Exclude the 'progress' object from hashing as it's not part of the configuration
+    hash_input = []
+    for arg in args:
+        if not isinstance(arg, gr.Progress):
+            hash_input.append(str(arg))
+    for k, v in kwargs.items():
+        if k != 'progress':
+            hash_input.append(f"{k}={v}")
+    
+    # Use a stable JSON representation for dictionary arguments if any
+    # For this specific function, all args are simple types, so direct string conversion is fine.
+    
+    return hashlib.md5("".join(hash_input).encode('utf-8')).hexdigest()
+
+def _save_to_cache(key, results_text, fig1, fig2):
+    """Saves simulation results and plots to the cache."""
+    cache_path = CACHE_DIR / key
+    cache_path.mkdir(exist_ok=True)
+
+    # Save plots as PNGs
+    fig1_path = cache_path / "fig1.png"
+    fig2_path = cache_path / "fig2.png"
+    fig1.savefig(fig1_path)
+    fig2.savefig(fig2_path)
+    plt.close(fig1) # Close figures to free memory
+    plt.close(fig2)
+
+    # Save metadata (results_text and plot paths)
+    metadata = {
+        "results_text": results_text,
+        "fig1_path": str(fig1_path),
+        "fig2_path": str(fig2_path)
+    }
+    with open(cache_path / "metadata.json", "w") as f:
+        json.dump(metadata, f)
+
+def _load_from_cache(key):
+    """Loads simulation results from the cache."""
+    cache_path = CACHE_DIR / key
+    metadata_path = cache_path / "metadata.json"
+
+    if not metadata_path.exists():
+        return None
+
+    with open(metadata_path, "r") as f:
+        metadata = json.load(f)
+    
+    # Load images from paths
+    try:
+        fig1_img = Image.open(metadata["fig1_path"])
+        fig2_img = Image.open(metadata["fig2_path"])
+    except FileNotFoundError:
+        print(f"Cached image files not found for key: {key}. Deleting cache entry.")
+        # Clean up incomplete cache entry
+        import shutil
+        shutil.rmtree(cache_path)
+        return None
+
+    # Convert PIL Image objects back to matplotlib figures for Gradio's gr.Plot
+    # This is a workaround as gr.Plot expects matplotlib figures, not PIL Images directly.
+    fig1_recreated = plt.figure()
+    ax1_recreated = fig1_recreated.add_subplot(111)
+    ax1_recreated.imshow(fig1_img)
+    ax1_recreated.axis('off') # Hide axes for image display
+
+    fig2_recreated = plt.figure()
+    ax2_recreated = fig2_recreated.add_subplot(111)
+    ax2_recreated.imshow(fig2_img)
+    ax2_recreated.axis('off') # Hide axes for image display
+
+    return "Loaded from cache!", metadata["results_text"], fig1_recreated, fig2_recreated
 
 def run_simulation(
     initial_investment: float,
@@ -21,6 +105,20 @@ def run_simulation(
     num_swr_intervals: int,
     progress=gr.Progress()
 ):
+    # Generate cache key from all input parameters except 'progress'
+    cache_key = _generate_cache_key(
+        initial_investment, num_years, num_simulations, target_success_rate,
+        stock_mean_return, stock_std_dev, bond_mean_return, bond_std_dev,
+        stock_allocation, correlation_stock_bond, mean_inflation,
+        std_dev_inflation, min_swr_test, max_swr_test, num_swr_intervals
+    )
+
+    # Check if results are in cache
+    cached_results = _load_from_cache(cache_key)
+    if cached_results:
+        progress(1, desc="Loading from cache...")
+        return cached_results
+
     swr_test_step = (max_swr_test - min_swr_test) / num_swr_intervals if num_swr_intervals > 0 else 0.1 # Calculate step
     progress(0, desc="Starting simulation...")
     start_time = time.time()
@@ -174,6 +272,9 @@ def run_simulation(
         ax2.set_xlabel("Year")
         ax2.set_ylabel("Portfolio Value ($)")
 
+    # Save results to cache before returning
+    _save_to_cache(cache_key, results_text, fig1, fig2)
+
     return "Simulation Complete!", results_text, fig1, fig2
 
 # Gradio Interface
@@ -294,7 +395,7 @@ with gr.Blocks() as demo:
             max_swr_test = gr.Slider(minimum=0.5, maximum=10.0, value=5.0, step=0.1, label="Max SWR to Test (%)", interactive=True)
             num_swr_intervals = gr.Slider(minimum=5, maximum=100, value=15, step=1, label="Number of SWR Intervals", interactive=True)
 
-            run_button = gr.Button("Run Simulation")
+            run_button = gr.Button("Run Simulation", variant="primary")
 
         with gr.Column():
             gr.Markdown("### Simulation Results")
@@ -331,4 +432,58 @@ with gr.Blocks() as demo:
         ],
         outputs=[status_output, results_output, swr_plot_output, paths_plot_output]
     )
+
+    # Define default parameters for initial load
+    DEFAULT_PARAMS = {
+        "initial_investment": 1_000_000.0,
+        "num_years": 30,
+        "num_simulations": 5000,
+        "target_success_rate": 95,
+        "stock_mean_return": 9.0,
+        "stock_std_dev": 15.0,
+        "bond_mean_return": 4.0,
+        "bond_std_dev": 5.0,
+        "stock_allocation": 60,
+        "correlation_stock_bond": -0.2,
+        "mean_inflation": 2.5,
+        "std_dev_inflation": 1.5,
+        "min_swr_test": 2.5,
+        "max_swr_test": 5.0,
+        "num_swr_intervals": 15
+    }
+
+    def load_default_results():
+        """Loads cached results for default parameters if available."""
+        # Ensure the order of parameters matches _generate_cache_key
+        default_key = _generate_cache_key(
+            DEFAULT_PARAMS["initial_investment"],
+            DEFAULT_PARAMS["num_years"],
+            DEFAULT_PARAMS["num_simulations"],
+            DEFAULT_PARAMS["target_success_rate"],
+            DEFAULT_PARAMS["stock_mean_return"],
+            DEFAULT_PARAMS["stock_std_dev"],
+            DEFAULT_PARAMS["bond_mean_return"],
+            DEFAULT_PARAMS["bond_std_dev"],
+            DEFAULT_PARAMS["stock_allocation"],
+            DEFAULT_PARAMS["correlation_stock_bond"],
+            DEFAULT_PARAMS["mean_inflation"],
+            DEFAULT_PARAMS["std_dev_inflation"],
+            DEFAULT_PARAMS["min_swr_test"],
+            DEFAULT_PARAMS["max_swr_test"],
+            DEFAULT_PARAMS["num_swr_intervals"]
+        )
+        
+        cached = _load_from_cache(default_key)
+        if cached:
+            return cached
+        else:
+            # Return empty/placeholder values if no cache hit
+            return "No default cache found. Run simulation.", "", None, None
+
+    # Load default results on app startup
+    demo.load(
+        fn=load_default_results,
+        outputs=[status_output, results_output, swr_plot_output, paths_plot_output]
+    )
+
     demo.launch()
