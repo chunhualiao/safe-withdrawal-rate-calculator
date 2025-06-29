@@ -233,6 +233,10 @@ def run_simulation(
         results_text += f"The lowest tested SWR ({lowest_tested_swr*100:.1f}%) had a success rate of {highest_success_at_lowest_swr*100:.2f}%.\n"
         results_text += "Consider revising assumptions (e.g., higher returns, lower volatility/inflation, shorter horizon) or target success rate.\n"
 
+    results_text += "\n--- All Tested Withdrawal Rates and Success Probabilities ---\n"
+    for r in all_results:
+        results_text += f"SWR: {r['swr']*100:.2f}% -> Success Rate: {r['success_rate']*100:.2f}%\n"
+
     # --- Plotting Results ---
     swrs_plot = [r['swr'] * 100 for r in all_results]
     success_rates_plot = [r['success_rate'] * 100 for r in all_results]
@@ -402,7 +406,7 @@ with gr.Blocks() as demo:
             status_output = gr.Textbox(label="Status", interactive=False, lines=1)
             
             gr.Markdown("#### Calculated Safe Withdrawal Rate Summary")
-            results_output = gr.Textbox(label="Summary Text", lines=5)
+            results_output = gr.Textbox(label="Summary Text", interactive=False) # Removed lines=5 to allow auto-scrolling
             
             gr.Markdown("#### SWR Success Rates Plot")
             swr_plot_output = gr.Plot(label="SWR Success Rates")
