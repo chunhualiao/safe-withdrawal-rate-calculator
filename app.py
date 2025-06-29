@@ -170,7 +170,7 @@ with gr.Blocks() as demo:
     with gr.Row():
         with gr.Column():
             gr.Markdown("### Investment Details")
-            initial_investment = gr.Number(label="Initial Investment ($)", value=2_500_000.0, interactive=True)
+            initial_investment = gr.Number(label="Initial Investment ($)", value=1_000_000.0, interactive=True)
             num_years = gr.Slider(minimum=10, maximum=60, value=30, step=1, label="Number of Years", interactive=True)
             target_success_rate = gr.Slider(minimum=70, maximum=100, value=95, step=1, label="Target Success Rate (%)", interactive=True)
             num_simulations = gr.Slider(minimum=1000, maximum=50000, value=10000, step=1000, label="Number of Simulations", interactive=True)
