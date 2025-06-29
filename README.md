@@ -1,4 +1,15 @@
-# Safe Withdrawal Rate Calculator
+---
+title: Safe Withdrawal Rate Calculator
+emoji: 🏢
+colorFrom: indigo
+colorTo: red
+sdk: gradio
+sdk_version: 5.35.0
+app_file: app.py
+pinned: false
+license: mit
+short_description: Safe Withdrawal Rate Calculator
+---
 
 This Hugging Face Space hosts an interactive application that performs Monte Carlo simulations to determine a safe withdrawal rate from a retirement portfolio. Users can adjust various financial parameters and instantly see the impact on portfolio success rates and projected portfolio paths.
 
