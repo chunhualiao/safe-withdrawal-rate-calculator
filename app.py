@@ -88,14 +88,14 @@ def run_simulation(
             if not simulation_failed_this_run:
                 success_count += 1
             
-            if swr == 0.035 and i < 100:
-                 current_swr_paths.append(path)
+            # Always append path, we'll select a sample later
+            current_swr_paths.append(path)
 
         success_probability = success_count / num_simulations
         all_results.append({'swr': swr, 'success_rate': success_probability})
         
-        if swr == 0.035:
-            portfolio_paths_for_plotting[swr] = current_swr_paths
+        # Store a sample of paths for this SWR
+        portfolio_paths_for_plotting[swr] = current_swr_paths[:100] # Store up to 100 paths
 
     final_swr = 0.0
     initial_annual_withdrawal_amount = 0.0
