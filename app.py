@@ -252,17 +252,20 @@ with gr.Blocks() as demo:
     )
     
     with gr.Row():
-        gr.Button("Details").click(
-            fn=lambda: gr.update(visible=True),
-            outputs=[gr.get_component('explanation_modal')]
-        )
+        details_button = gr.Button("Details")
 
-    with gr.Modal(title="Understanding the Safe Withdrawal Rate (SWR) Calculator", visible=False, elem_id="explanation_modal") as explanation_modal:
+    with gr.Modal(title="Understanding the Safe Withdrawal Rate (SWR) Calculator", visible=False) as explanation_modal:
         gr.Markdown(explanation_text)
-        gr.Button("Close").click(
-            fn=lambda: gr.update(visible=False),
-            outputs=[explanation_modal]
-        )
+        close_modal_button = gr.Button("Close")
+
+    details_button.click(
+        fn=lambda: gr.update(visible=True),
+        outputs=[explanation_modal]
+    )
+    close_modal_button.click(
+        fn=lambda: gr.update(visible=False),
+        outputs=[explanation_modal]
+    )
 
     with gr.Row():
         with gr.Column():
