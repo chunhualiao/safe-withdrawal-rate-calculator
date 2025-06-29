@@ -251,7 +251,15 @@ def run_simulation(
     ax1.set_ylabel('Probability of Portfolio Lasting 30 Years (%)')
     ax1.grid(True)
     ax1.legend()
-    ax1.set_ylim(0, 105)
+    
+    # Dynamically adjust y-axis limits for SWR Success Rates Plot
+    if success_rates_plot:
+        min_success = min(success_rates_plot)
+        max_success = max(success_rates_plot)
+        # Add a small buffer to the min/max for better visualization
+        ax1.set_ylim(max(0, min_success - 5), min(100, max_success + 5))
+    else:
+        ax1.set_ylim(0, 105) # Fallback if no success rates are plotted
 
     fig2, ax2 = plt.subplots(figsize=(12, 7))
     chosen_swr_for_path_plot = final_swr if final_swr > 0 else 0.035
@@ -279,7 +287,7 @@ def run_simulation(
     # Save results to cache before returning
     _save_to_cache(cache_key, results_text, fig1, fig2)
 
-    return "Simulation Complete!", results_text, fig1, fig2
+    return f"Simulation Complete! Results text length: {len(results_text)}", results_text, fig1, fig2
 
 # Gradio Interface
 # Explanation text for the modal
