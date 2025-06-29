@@ -266,6 +266,11 @@ with gr.Blocks() as demo:
         """
     )
     
+    with gr.Row():
+        gr.Button("Buy Me a Coffee ☕", link="https://buymeacoffee.com/liaoch", variant="primary")
+        gr.Markdown("&nbsp;&nbsp;&nbsp;&nbsp;") # Add some space
+        gr.Button("Details", elem_id="details_button") # Add an ID to the button for potential future use
+
     with gr.Accordion("Details: Understanding the Safe Withdrawal Rate (SWR) Calculator", open=False):
         gr.Markdown(explanation_text)
 
