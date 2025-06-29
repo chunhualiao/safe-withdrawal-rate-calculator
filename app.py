@@ -228,9 +228,7 @@ with gr.Blocks() as demo:
         ],
         outputs=[status_output, results_output, swr_plot_output, paths_plot_output]
     )
-
     demo.launch()
-
     gr.Markdown(
         """
         ---
