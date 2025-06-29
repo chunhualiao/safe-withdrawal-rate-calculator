@@ -17,9 +17,10 @@ def run_simulation(
     std_dev_inflation: float,
     min_swr_test: float,
     max_swr_test: float,
-    swr_test_step: float,
+    num_swr_intervals: int,
     progress=gr.Progress()
 ):
+    swr_test_step = (max_swr_test - min_swr_test) / num_swr_intervals if num_swr_intervals > 0 else 0.1 # Calculate step
     progress(0, desc="Starting simulation...")
     # --- Core Parameters ---
     initial_investment = float(initial_investment)
@@ -47,7 +48,9 @@ def run_simulation(
     ])
 
     # --- SWRs to Test ---
-    withdrawal_rates_to_test = np.arange(min_swr_test / 100.0, (max_swr_test + swr_test_step) / 100.0, swr_test_step / 100.0)
+    # Calculate swr_test_step based on range and number of intervals
+    # Ensure the range is inclusive of max_swr_test by adding a small epsilon or adjusting arange end
+    withdrawal_rates_to_test = np.arange(min_swr_test / 100.0, (max_swr_test + swr_test_step/2) / 100.0, swr_test_step / 100.0)
     all_results = []
     portfolio_paths_for_plotting = {}
 
@@ -263,7 +266,7 @@ with gr.Blocks() as demo:
             gr.Markdown("### SWR Test Range")
             min_swr_test = gr.Slider(minimum=0.5, maximum=10.0, value=2.5, step=0.1, label="Min SWR to Test (%)", interactive=True)
             max_swr_test = gr.Slider(minimum=0.5, maximum=10.0, value=5.0, step=0.1, label="Max SWR to Test (%)", interactive=True)
-            swr_test_step = gr.Slider(minimum=0.01, maximum=0.5, value=0.1, step=0.01, label="SWR Test Step (%)", interactive=True)
+            num_swr_intervals = gr.Slider(minimum=10, maximum=200, value=25, step=1, label="Number of SWR Intervals", interactive=True)
 
             run_button = gr.Button("Run Simulation")
 
@@ -297,7 +300,7 @@ with gr.Blocks() as demo:
             std_dev_inflation,
             min_swr_test,
             max_swr_test,
-            swr_test_step
+            num_swr_intervals
         ],
         outputs=[status_output, results_output, swr_plot_output, paths_plot_output]
     )
