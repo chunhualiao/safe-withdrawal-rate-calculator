@@ -251,21 +251,8 @@ with gr.Blocks() as demo:
         """
     )
     
-    with gr.Row():
-        details_button = gr.Button("Details")
-
-    with gr.Modal(title="Understanding the Safe Withdrawal Rate (SWR) Calculator", visible=False) as explanation_modal:
+    with gr.Accordion("Details: Understanding the Safe Withdrawal Rate (SWR) Calculator", open=False):
         gr.Markdown(explanation_text)
-        close_modal_button = gr.Button("Close")
-
-    details_button.click(
-        fn=lambda: gr.update(visible=True),
-        outputs=[explanation_modal]
-    )
-    close_modal_button.click(
-        fn=lambda: gr.update(visible=False),
-        outputs=[explanation_modal]
-    )
 
     with gr.Row():
         with gr.Column():
