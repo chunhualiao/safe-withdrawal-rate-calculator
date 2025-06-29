@@ -229,4 +229,81 @@ with gr.Blocks() as demo:
         outputs=[status_output, results_output, swr_plot_output, paths_plot_output]
     )
 
-demo.launch()
+    demo.launch()
+
+    gr.Markdown(
+        """
+        ---
+        ## Understanding the Safe Withdrawal Rate (SWR) Calculator
+
+        ### 1. What is the Safe Withdrawal Rate (SWR)?
+        The Safe Withdrawal Rate (SWR) is a concept primarily used in retirement planning. It refers to the percentage of your initial retirement portfolio that you can withdraw each year, adjusted for inflation, without running out of money over a specified period (e.g., 30 years). The goal is to find a withdrawal rate that has a very high probability of success, even in adverse market conditions.
+
+        This calculator uses a **Monte Carlo Simulation** approach to determine the SWR. Instead of relying on historical averages, which might not repeat, Monte Carlo simulations run thousands of possible future market scenarios based on statistical distributions (mean and standard deviation) of asset returns and inflation. For each scenario, it checks if the portfolio lasts the entire retirement period.
+
+        ### 2. Key Assumptions Used in This Calculator and Their Meaning
+
+        The accuracy and relevance of the calculated SWR heavily depend on the assumptions you provide.
+
+        *   **Initial Investment**: Your starting portfolio value.
+        *   **Number of Years**: The duration of your retirement (e.g., 30 years).
+        *   **Number of Simulations**: How many different market scenarios the calculator runs. More simulations lead to more accurate results but take longer.
+        *   **Target Success Rate**: The probability you want your portfolio to last (e.g., 95% means 95 out of 100 simulations succeed).
+        *   **Stock Mean Return (%)**: The average annual nominal return you expect from your stock investments.
+        *   **Stock Standard Deviation (%)**: A measure of how much the stock returns are expected to vary from the mean (volatility). Higher standard deviation means more volatile returns.
+        *   **Bond Mean Return (%)**: The average annual nominal return you expect from your bond investments.
+        *   **Bond Standard Deviation (%)**: A measure of how much the bond returns are expected to vary from the mean (volatility).
+        *   **Correlation (Stocks vs. Bonds)**: How stock and bond returns move in relation to each other. A negative correlation means they tend to move in opposite directions, which can help diversify a portfolio.
+        *   **Stock Allocation (%)**: The percentage of your portfolio invested in stocks (the rest is in bonds).
+        *   **Mean Inflation (%)**: The average annual inflation rate you expect. Withdrawals are typically adjusted for inflation to maintain purchasing power.
+        *   **Inflation Standard Deviation (%)**: How much the inflation rate is expected to vary.
+        *   **SWR Test Range**: The range of withdrawal rates (e.g., 2.5% to 5.0%) that the simulation will test to find the optimal SWR.
+
+        ### 3. Common Misunderstandings about SWR
+
+        *   **It's a Guarantee**: The SWR is a probability, not a guarantee. A 95% success rate means 5% of scenarios still fail.
+        *   **Fixed for Life**: The SWR is calculated based on initial assumptions. Life events, market shifts, or changes in spending can necessitate adjustments.
+        *   **One Size Fits All**: The SWR is highly personal and depends on your specific portfolio, risk tolerance, and spending habits.
+        *   **Only Initial Withdrawal Matters**: While the initial withdrawal rate is key, how you adjust withdrawals in response to market performance (e.g., reducing spending in down years) can significantly impact portfolio longevity. This calculator assumes inflation-adjusted withdrawals.
+
+        ### 4. How the Calculator Works Internally
+
+        The core of this calculator is a Monte Carlo simulation that models thousands of possible future scenarios for your portfolio.
+
+        **Key Steps (Simplified):**
+
+        1.  **Parameter Initialization**: All input parameters are converted to decimal form (e.g., 9% becomes 0.09).
+        2.  **Covariance Matrix Calculation**: A covariance matrix is created using the mean returns, standard deviations, and correlation of stocks and bonds. This allows the simulation to generate realistic, correlated returns for both asset classes.
+            ```python
+            mean_asset_returns = np.array([stock_mean_return, bond_mean_return])
+            cov_matrix = np.array([
+                [stock_std_dev**2, correlation_stock_bond * stock_std_dev * bond_std_dev],
+                [correlation_stock_bond * stock_std_dev * bond_std_dev, bond_std_dev**2]
+            ])
+            ```
+        3.  **Iterating SWRs**: The calculator tests a range of SWRs (e.g., from 2.5% to 5.0%).
+        4.  **Monte Carlo Loop (for each SWR)**:
+            *   For each SWR, `num_simulations` (e.g., 10,000) independent scenarios are run.
+            *   **Annual Simulation Loop**: For each year of the `num_years` retirement period:
+                *   **Inflation Adjustment**: The annual withdrawal amount is adjusted for inflation based on a randomly generated inflation rate for that year.
+                    ```python
+                    yearly_inflation = np.random.normal(mean_inflation, std_dev_inflation)
+                    current_annual_withdrawal_nominal *= (1 + yearly_inflation)
+                    ```
+                *   **Withdrawal**: The adjusted withdrawal amount is subtracted from the portfolio.
+                *   **Ruin Check**: If the portfolio value drops to zero or below, the simulation for that scenario fails.
+                *   **Generate Returns**: Random, correlated returns for stocks and bonds are generated for the year using the covariance matrix.
+                    ```python
+                    asset_returns_this_year = np.random.multivariate_normal(mean_asset_returns, cov_matrix)
+                    portfolio_return_this_year = (stock_allocation * asset_returns_this_year[0] +
+                                                  bond_allocation * asset_returns_this_year[1])
+                    ```
+                *   **Apply Returns**: The portfolio value is updated with the generated returns.
+            *   **Success/Failure Tracking**: After `num_years`, if the portfolio is still positive, the simulation is counted as a success.
+        5.  **Calculate Success Rate**: For each SWR, the `success_count` is divided by `num_simulations` to get the `success_probability`.
+        6.  **Find Optimal SWR**: The calculator then finds the highest SWR that meets or exceeds your `Target Success Rate`.
+        7.  **Plotting**: Finally, the results are visualized in two plots:
+            *   **SWR Success Rates**: Shows the success probability curve across all tested SWRs.
+            *   **Sample Portfolio Paths**: Displays a subset of individual simulation paths to illustrate portfolio behavior over time.
+        """
+    )
