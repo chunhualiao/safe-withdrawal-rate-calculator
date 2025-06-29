@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import gradio as gr
+import time
 
 def run_simulation(
     initial_investment: float,
@@ -22,6 +23,7 @@ def run_simulation(
 ):
     swr_test_step = (max_swr_test - min_swr_test) / num_swr_intervals if num_swr_intervals > 0 else 0.1 # Calculate step
     progress(0, desc="Starting simulation...")
+    start_time = time.time()
     # --- Core Parameters ---
     initial_investment = float(initial_investment)
     num_years = int(num_years)
@@ -55,8 +57,21 @@ def run_simulation(
     all_results = []
     portfolio_paths_for_plotting = {}
 
+    total_swr_tests = len(withdrawal_rates_to_test)
     for idx, swr in enumerate(withdrawal_rates_to_test):
-        progress((idx + 1) / len(withdrawal_rates_to_test), desc=f"Simulating SWR: {swr*100:.1f}%")
+        elapsed_time = time.time() - start_time
+        progress_ratio = (idx + 1) / total_swr_tests
+        
+        if progress_ratio > 0:
+            estimated_total_time = elapsed_time / progress_ratio
+            estimated_remaining_time = estimated_total_time - elapsed_time
+            remaining_minutes = estimated_remaining_time / 60
+            progress_desc = f"Simulating SWR: {swr*100:.1f}% (Est. remaining: {remaining_minutes:.1f} min)"
+        else:
+            progress_desc = f"Simulating SWR: {swr*100:.1f}%"
+        
+        progress((idx + 1) / total_swr_tests, desc=progress_desc)
+        
         success_count = 0
         current_swr_paths = []
 
