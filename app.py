@@ -266,9 +266,6 @@ with gr.Blocks() as demo:
         """
     )
     
-    with gr.Row():
-        gr.Button("Buy Me a Coffee ☕", link="https://buymeacoffee.com/liaoch", variant="primary")
-
     with gr.Accordion("Details: Understanding the Safe Withdrawal Rate (SWR) Calculator", open=False):
         gr.Markdown(explanation_text)
 
@@ -311,6 +308,7 @@ with gr.Blocks() as demo:
             
             gr.Markdown("#### Sample Portfolio Paths Plot")
             paths_plot_output = gr.Plot(label="Sample Portfolio Paths")
+            gr.Button("Buy Me a Coffee ☕", link="https://buymeacoffee.com/liaoch", variant="primary")
 
     run_button.click(
         fn=run_simulation,
