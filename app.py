@@ -49,8 +49,9 @@ def run_simulation(
 
     # --- SWRs to Test ---
     # Calculate swr_test_step based on range and number of intervals
-    # Ensure the range is inclusive of max_swr_test by adding a small epsilon or adjusting arange end
-    withdrawal_rates_to_test = np.arange(min_swr_test / 100.0, (max_swr_test + swr_test_step/2) / 100.0, swr_test_step / 100.0)
+    swr_test_step_calculated = (max_swr_test - min_swr_test) / num_swr_intervals if num_swr_intervals > 0 else 0.1
+    # Use linspace for more precise interval generation
+    withdrawal_rates_to_test = np.linspace(min_swr_test / 100.0, max_swr_test / 100.0, num_swr_intervals + 1)
     all_results = []
     portfolio_paths_for_plotting = {}
 
@@ -176,6 +177,8 @@ with gr.Blocks() as demo:
 
         This calculator uses a **Monte Carlo Simulation** approach to determine the SWR. Instead of relying on historical averages, which might not repeat, Monte Carlo simulations run thousands of possible future market scenarios based on statistical distributions (mean and standard deviation) of asset returns and inflation. For each scenario, it checks if the portfolio lasts the entire retirement period.
 
+        **Performance Note**: The simulation can be computationally intensive. To speed up calculations, consider reducing the `Number of Simulations` and `Number of SWR Intervals`. Higher values provide more accuracy but take longer to compute.
+
         ### 2. Key Assumptions Used in This Calculator and Their Meaning
 
         The accuracy and relevance of the calculated SWR heavily depend on the assumptions you provide.
@@ -249,7 +252,7 @@ with gr.Blocks() as demo:
             initial_investment = gr.Number(label="Initial Investment ($)", value=1_000_000.0, interactive=True)
             num_years = gr.Slider(minimum=10, maximum=60, value=30, step=1, label="Number of Years", interactive=True)
             target_success_rate = gr.Slider(minimum=70, maximum=100, value=95, step=1, label="Target Success Rate (%)", interactive=True)
-            num_simulations = gr.Slider(minimum=1000, maximum=50000, value=10000, step=1000, label="Number of Simulations", interactive=True)
+            num_simulations = gr.Slider(minimum=100, maximum=20000, value=5000, step=100, label="Number of Simulations", interactive=True)
 
             gr.Markdown("### Market Assumptions (Annualized Nominal Returns)")
             stock_mean_return = gr.Slider(minimum=0, maximum=20, value=9.0, step=0.1, label="Stock Mean Return (%)", interactive=True)
@@ -266,7 +269,7 @@ with gr.Blocks() as demo:
             gr.Markdown("### SWR Test Range")
             min_swr_test = gr.Slider(minimum=0.5, maximum=10.0, value=2.5, step=0.1, label="Min SWR to Test (%)", interactive=True)
             max_swr_test = gr.Slider(minimum=0.5, maximum=10.0, value=5.0, step=0.1, label="Max SWR to Test (%)", interactive=True)
-            num_swr_intervals = gr.Slider(minimum=10, maximum=200, value=25, step=1, label="Number of SWR Intervals", interactive=True)
+            num_swr_intervals = gr.Slider(minimum=5, maximum=100, value=15, step=1, label="Number of SWR Intervals", interactive=True)
 
             run_button = gr.Button("Run Simulation")
 
