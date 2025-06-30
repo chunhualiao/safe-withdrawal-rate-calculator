@@ -11,7 +11,7 @@ license: mit
 short_description: Safe Withdrawal Rate Calculator
 ---
 
-![Screenshot](screenshot.png)
+![screenshot](https://private-user-images.githubusercontent.com/1627206/460409282-a733a6d3-4b48-4e02-b3ab-2e11efc33c15.png)
 
 This application is deployed to [Hugging Face Spaces](https://huggingface.co/spaces/liaoch/Safe-Withdrawal-Rate-Calculator).
 
