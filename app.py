@@ -434,7 +434,7 @@ with gr.Blocks() as demo:
             gr.Markdown("### SWR Test Range")
             min_swr_test = gr.Slider(minimum=0.5, maximum=10.0, value=2.5, step=0.1, label="Min SWR to Test (%)", interactive=True)
             max_swr_test = gr.Slider(minimum=0.5, maximum=10.0, value=5.0, step=0.1, label="Max SWR to Test (%)", interactive=True)
-            num_swr_intervals = gr.Slider(minimum=5, maximum=100, value=15, step=1, label="Number of SWR Intervals", interactive=True)
+            num_swr_intervals = gr.Slider(minimum=5, maximum=100, value=10, step=1, label="Number of SWR Intervals", interactive=True)
 
             run_button = gr.Button("Run Simulation", variant="primary")
 
@@ -490,7 +490,7 @@ with gr.Blocks() as demo:
         "std_dev_inflation": 1.5,
         "min_swr_test": 2.5,
         "max_swr_test": 5.0,
-        "num_swr_intervals": 15
+        "num_swr_intervals": 10
     }
 
     def load_default_results():
