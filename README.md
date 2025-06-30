@@ -11,6 +11,10 @@ license: mit
 short_description: Safe Withdrawal Rate Calculator
 ---
 
+![Screenshot](screenshot.png)
+
+This application is deployed to [Hugging Face Spaces](https://huggingface.co/spaces/liaoch/Safe-Withdrawal-Rate-Calculator).
+
 This Hugging Face Space hosts an interactive application that performs Monte Carlo simulations to determine a safe withdrawal rate from a retirement portfolio. Users can adjust various financial parameters and instantly see the impact on portfolio success rates and projected portfolio paths.
 
 ## How to Use
