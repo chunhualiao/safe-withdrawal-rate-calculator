@@ -41,8 +41,8 @@ def _save_to_cache(key, results_text, fig1, fig2):
     # Save plots as PNGs
     fig1_path = cache_path / "fig1.png"
     fig2_path = cache_path / "fig2.png"
-    fig1.savefig(fig1_path)
-    fig2.savefig(fig2_path)
+    fig1.savefig(fig1_path, bbox_inches='tight', pad_inches=0)
+    fig2.savefig(fig2_path, bbox_inches='tight', pad_inches=0)
     plt.close(fig1) # Close figures to free memory
     plt.close(fig2)
 
@@ -83,11 +83,13 @@ def _load_from_cache(key):
     ax1_recreated = fig1_recreated.add_subplot(111)
     ax1_recreated.imshow(fig1_img)
     ax1_recreated.axis('off') # Hide axes for image display
+    fig1_recreated.subplots_adjust(left=0, right=1, top=1, bottom=0) # Make axes fill the figure
 
     fig2_recreated = plt.figure()
     ax2_recreated = fig2_recreated.add_subplot(111)
     ax2_recreated.imshow(fig2_img)
     ax2_recreated.axis('off') # Hide axes for image display
+    fig2_recreated.subplots_adjust(left=0, right=1, top=1, bottom=0) # Make axes fill the figure
 
     return "Loaded from cache!", metadata["results_text"], fig1_recreated, fig2_recreated
 
@@ -274,12 +276,35 @@ def run_simulation(
                  ax2.plot(range(num_years + 1), path_data, alpha=0.1, color='blue' if path_data[-1] > 0 else 'red')
         
         ax2.set_title(f'Sample Portfolio Paths for {chosen_swr_for_path_plot*100:.2f}% SWR (100 simulations shown)')
+        # Collect all portfolio values for dynamic y-axis adjustment
+        all_portfolio_values = []
+        for path_data in paths_to_plot_sample:
+            all_portfolio_values.extend([val for val in path_data if val > 0]) # Only include positive values for log scale consideration
+
+        if all_portfolio_values:
+            min_val = min(all_portfolio_values)
+            max_val = max(all_portfolio_values)
+            
+            # Add a small buffer to the min/max for better visualization
+            # Ensure min_val is not too close to zero for log scale
+            y_min = max(1, min_val * 0.9) if min_val > 0 else 1 # Ensure y_min is at least 1 for log scale
+            y_max = max_val * 1.1
+
+            ax2.set_ylim(y_min, y_max)
+            ax2.set_yscale('log') # Keep log scale if all values are positive
+            ax2.axhline(y=initial_investment, color='k', linestyle='--', label=f'Initial: ${initial_investment:,.0f}')
+            ax2.axhline(y=1, color='grey', linestyle=':', label='$1 (for log scale visibility near zero)')
+        else:
+            # Fallback if no positive values are found (e.g., all simulations failed immediately)
+            ax2.set_yscale('linear') # Switch to linear scale if no positive values
+            ax2.set_ylim(0, initial_investment * 1.1) # Default linear range
+            ax2.axhline(y=initial_investment, color='k', linestyle='--', label=f'Initial: ${initial_investment:,.0f}')
+            ax2.axhline(y=0, color='grey', linestyle=':', label='$0')
+
+
         ax2.set_xlabel('Year')
         ax2.set_ylabel('Portfolio Value ($)')
-        ax2.set_yscale('log')
         ax2.grid(True, which="both", ls="-", alpha=0.5)
-        ax2.axhline(y=initial_investment, color='k', linestyle='--', label=f'Initial: ${initial_investment:,.0f}')
-        ax2.axhline(y=1, color='grey', linestyle=':', label='$1 (for log scale visibility near zero)')
         ax2.legend()
     else:
         ax2.text(0.5, 0.5, f"No portfolio paths were stored for SWR {chosen_swr_for_path_plot*100:.2f}% to plot individual simulations.",
