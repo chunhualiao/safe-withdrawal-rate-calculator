@@ -14,7 +14,7 @@ os.environ['HF_HUB_DISABLE_TELEMETRY'] = '1'
 
 # --- Caching Setup ---
 CACHE_DIR = pathlib.Path("cache")
-CACHE_DIR.mkdir(exist_ok=True)
+CACHE_DIR.mkdir(exist_ok=True, parents=True)
 
 def _generate_cache_key(*args, **kwargs):
     """Generates a unique hash for the given arguments."""
@@ -33,24 +33,28 @@ def _generate_cache_key(*args, **kwargs):
     
     return hashlib.md5("".join(hash_input).encode('utf-8')).hexdigest()
 
-def _save_to_cache(key, results_text, fig1, fig2):
+def _save_to_cache(key, results_text, fig1, fig2, fig3):
     """Saves simulation results and plots to the cache."""
     cache_path = CACHE_DIR / key
-    cache_path.mkdir(exist_ok=True)
+    cache_path.mkdir(exist_ok=True, parents=True)
 
     # Save plots as PNGs
     fig1_path = cache_path / "fig1.png"
     fig2_path = cache_path / "fig2.png"
+    fig3_path = cache_path / "fig3.png" # New fig3 path
     fig1.savefig(fig1_path, bbox_inches='tight', pad_inches=0)
     fig2.savefig(fig2_path, bbox_inches='tight', pad_inches=0)
+    fig3.savefig(fig3_path, bbox_inches='tight', pad_inches=0) # Save fig3
     plt.close(fig1) # Close figures to free memory
     plt.close(fig2)
+    plt.close(fig3) # Close fig3
 
     # Save metadata (results_text and plot paths)
     metadata = {
         "results_text": results_text,
         "fig1_path": str(fig1_path),
-        "fig2_path": str(fig2_path)
+        "fig2_path": str(fig2_path),
+        "fig3_path": str(fig3_path) # Add fig3 path to metadata
     }
     with open(cache_path / "metadata.json", "w") as f:
         json.dump(metadata, f)
@@ -70,6 +74,13 @@ def _load_from_cache(key):
     try:
         fig1_img = Image.open(metadata["fig1_path"])
         fig2_img = Image.open(metadata["fig2_path"])
+        # Explicitly check for fig3_path to invalidate old cache entries
+        if "fig3_path" not in metadata:
+            print(f"Cached metadata for key: {key} is missing fig3_path. Invalidating cache entry.")
+            import shutil
+            shutil.rmtree(cache_path)
+            return None
+        fig3_img = Image.open(metadata["fig3_path"]) # Load fig3 image
     except FileNotFoundError:
         print(f"Cached image files not found for key: {key}. Deleting cache entry.")
         # Clean up incomplete cache entry
@@ -91,7 +102,13 @@ def _load_from_cache(key):
     ax2_recreated.axis('off') # Hide axes for image display
     fig2_recreated.subplots_adjust(left=0, right=1, top=1, bottom=0) # Make axes fill the figure
 
-    return "Loaded from cache!", metadata["results_text"], fig1_recreated, fig2_recreated
+    fig3_recreated = plt.figure() # Recreate fig3
+    ax3_recreated = fig3_recreated.add_subplot(111)
+    ax3_recreated.imshow(fig3_img)
+    ax3_recreated.axis('off') # Hide axes for image display
+    fig3_recreated.subplots_adjust(left=0, right=1, top=1, bottom=0) # Make axes fill the figure
+
+    return "Loaded from cache!", metadata["results_text"], fig1_recreated, fig2_recreated, fig3_recreated # Return fig3
 
 def run_simulation(
     initial_investment: float,
@@ -178,6 +195,7 @@ def run_simulation(
         
         success_count = 0
         current_swr_paths = []
+        balance_or_more_count = 0 # Initialize counter for new metric
 
         for i in range(num_simulations):
             portfolio_value = float(initial_investment)
@@ -210,12 +228,16 @@ def run_simulation(
 
             if not simulation_failed_this_run:
                 success_count += 1
+                # Check if final balance is same or more than initial
+                if portfolio_value >= initial_investment:
+                    balance_or_more_count += 1
             
             # Always append path, we'll select a sample later
             current_swr_paths.append(path)
 
         success_probability = success_count / num_simulations
-        all_results.append({'swr': swr, 'success_rate': success_probability})
+        balance_or_more_probability = balance_or_more_count / num_simulations # Calculate new probability
+        all_results.append({'swr': swr, 'success_rate': success_probability, 'balance_or_more_prob': balance_or_more_probability}) # Add to results
         
         # Store a sample of paths for this SWR
         portfolio_paths_for_plotting[swr] = current_swr_paths[:100] # Store up to 100 paths
@@ -239,13 +261,14 @@ def run_simulation(
         results_text += f"The lowest tested SWR ({lowest_tested_swr*100:.1f}%) had a success rate of {highest_success_at_lowest_swr*100:.2f}%.\n"
         results_text += "Consider revising assumptions (e.g., higher returns, lower volatility/inflation, shorter horizon) or target success rate.\n"
 
-    results_text += "\n--- All Tested Withdrawal Rates and Success Probabilities ---\n"
+    results_text += "\n--- All Tested Withdrawal Rates, Success Probabilities, and Balance Retention ---\n"
     for r in all_results:
-        results_text += f"SWR: {r['swr']*100:.2f}% -> Success Rate: {r['success_rate']*100:.2f}%\n"
+        results_text += f"SWR: {r['swr']*100:.2f}% -> Success Rate: {r['success_rate']*100:.2f}% -> Balance >= Initial Prob: {r['balance_or_more_prob']*100:.2f}%\n"
 
     # --- Plotting Results ---
     swrs_plot = [r['swr'] * 100 for r in all_results]
     success_rates_plot = [r['success_rate'] * 100 for r in all_results]
+    balance_or_more_probs_plot = [r['balance_or_more_prob'] * 100 for r in all_results] # New data for plotting
 
     fig1, ax1 = plt.subplots(figsize=(10, 6))
     ax1.plot(swrs_plot, success_rates_plot, marker='o', linestyle='-')
@@ -313,10 +336,26 @@ def run_simulation(
         ax2.set_xlabel("Year")
         ax2.set_ylabel("Portfolio Value ($)")
 
-    # Save results to cache before returning
-    _save_to_cache(cache_key, results_text, fig1, fig2)
+    fig3, ax3 = plt.subplots(figsize=(10, 6))
+    ax3.plot(swrs_plot, balance_or_more_probs_plot, marker='o', linestyle='-', color='purple')
+    ax3.set_title(f'Monte Carlo SWR: Probability of End Balance >= Initial Investment ({num_simulations:,} simulations)')
+    ax3.set_xlabel('Initial Withdrawal Rate (%)')
+    ax3.set_ylabel('Probability of End Balance >= Initial Investment (%)')
+    ax3.grid(True)
+    ax3.legend(['Balance >= Initial Prob'])
 
-    return f"Simulation Complete! Results text length: {len(results_text)}", results_text, fig1, fig2
+    # Dynamically adjust y-axis limits for Balance >= Initial Investment Plot
+    if balance_or_more_probs_plot:
+        min_balance_prob = min(balance_or_more_probs_plot)
+        max_balance_prob = max(balance_or_more_probs_plot)
+        ax3.set_ylim(max(0, min_balance_prob - 5), min(100, max_balance_prob + 5))
+    else:
+        ax3.set_ylim(0, 105) # Fallback if no balance retention rates are plotted
+
+    # Save results to cache before returning
+    _save_to_cache(cache_key, results_text, fig1, fig2, fig3)
+
+    return f"Simulation Complete! Results text length: {len(results_text)}", results_text, fig1, fig2, fig3
 
 # Gradio Interface
 # Explanation text for the modal
@@ -391,10 +430,12 @@ The core of this calculator is a Monte Carlo simulation that models thousands of
         *   **Apply Returns**: The portfolio value is updated with the generated returns.
     *   **Success/Failure Tracking**: After `num_years`, if the portfolio is still positive, the simulation is counted as a success.
 5.  **Calculate Success Rate**: For each SWR, the `success_count` is divided by `num_simulations` to get the `success_probability`.
-6.  **Find Optimal SWR**: The calculator then finds the highest SWR that meets or exceeds your `Target Success Rate`.
-7.  **Plotting**: Finally, the results are visualized in two plots:
+6.  **Calculate Balance Retention Probability**: Additionally, the probability of ending the retirement period with a portfolio balance equal to or greater than the initial investment is calculated. This provides insight into how likely it is to not only avoid ruin but also to preserve or grow the initial capital.
+7.  **Find Optimal SWR**: The calculator then finds the highest SWR that meets or exceeds your `Target Success Rate`.
+8.  **Plotting**: Finally, the results are visualized in three plots:
     *   **SWR Success Rates**: Shows the success probability curve across all tested SWRs.
     *   **Sample Portfolio Paths**: Displays a subset of individual simulation paths to illustrate portfolio behavior over time.
+    *   **Probability of End Balance >= Initial Investment**: Shows the probability of ending with a portfolio balance equal to or greater than the initial investment for each tested SWR.
 """
 
 with gr.Blocks() as demo:
@@ -450,6 +491,10 @@ with gr.Blocks() as demo:
             
             gr.Markdown("#### Sample Portfolio Paths Plot")
             paths_plot_output = gr.Plot(label="Sample Portfolio Paths")
+
+            gr.Markdown("#### Probability of End Balance >= Initial Investment Plot")
+            balance_plot_output = gr.Plot(label="Probability of End Balance >= Initial Investment") # New plot output
+
             gr.Button("Buy Me a Coffee ☕", link="https://buymeacoffee.com/liaoch", variant="primary")
 
     run_button.click(
@@ -471,7 +516,7 @@ with gr.Blocks() as demo:
             max_swr_test,
             num_swr_intervals
         ],
-        outputs=[status_output, results_output, swr_plot_output, paths_plot_output]
+        outputs=[status_output, results_output, swr_plot_output, paths_plot_output, balance_plot_output] # Add new output
     )
 
     # Define default parameters for initial load
@@ -519,12 +564,12 @@ with gr.Blocks() as demo:
             return cached
         else:
             # Return empty/placeholder values if no cache hit
-            return "No default cache found. Run simulation.", "", None, None
+            return "No default cache found. Run simulation.", "", None, None, None # Add None for new plot
 
     # Load default results on app startup
     demo.load(
         fn=load_default_results,
-        outputs=[status_output, results_output, swr_plot_output, paths_plot_output]
+        outputs=[status_output, results_output, swr_plot_output, paths_plot_output, balance_plot_output] # Add new output
     )
 
     demo.launch()
