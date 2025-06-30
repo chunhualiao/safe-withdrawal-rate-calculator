@@ -487,13 +487,13 @@ with gr.Blocks() as demo:
             results_output = gr.Textbox(label="Summary Text", interactive=False) # Removed lines=5 to allow auto-scrolling
             
             gr.Markdown("#### SWR Success Rates Plot")
-            swr_plot_output = gr.Plot(label="SWR Success Rates")
+            swr_plot_output = gr.Plot()
             
             gr.Markdown("#### Sample Portfolio Paths Plot")
-            paths_plot_output = gr.Plot(label="Sample Portfolio Paths")
+            paths_plot_output = gr.Plot()
 
             gr.Markdown("#### Probability of End Balance >= Initial Investment Plot")
-            balance_plot_output = gr.Plot(label="Probability of End Balance >= Initial Investment") # New plot output
+            balance_plot_output = gr.Plot() # New plot output
 
             gr.Button("Buy Me a Coffee ☕", link="https://buymeacoffee.com/liaoch", variant="primary")
 
