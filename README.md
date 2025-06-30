@@ -29,6 +29,7 @@ This Hugging Face Space hosts an interactive application that performs Monte Car
     *   **Calculated Safe Withdrawal Rate**: Text output showing the highest SWR that meets your target success rate and the corresponding initial annual withdrawal amount.
     *   **SWR Success Rates Plot**: A graph showing the probability of portfolio success for various withdrawal rates.
     *   **Sample Portfolio Paths Plot**: A visualization of how a sample of portfolios might perform over the simulation period.
+    *   **Probability of End Balance >= Initial Investment Plot**: A graph showing the probability of ending the retirement period with a portfolio balance equal to or greater than the initial investment.
 
 ## Technical Details
 
